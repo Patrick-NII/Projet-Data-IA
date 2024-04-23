@@ -1,1 +1,122 @@
+import streamlit as st
+import requests
 
+# Il vous faut une clé de développeur TMDB
+api_key = "Mettre votre clé API TMDB"
+
+# Fonction pour récupérer le film le plus populaire.
+def fetch_most_popular_movie(api_key):
+    url = f"https://api.themoviedb.org/3/movie/popular?api_key={api_key}"
+    response = requests.get(url)
+    data = response.json()
+    # Récupérer le premier film de la liste des résultats.
+    return data['results'][0] 
+
+# Fonction pour récupérer les recommandations de films en fonction d'un film donné.
+def fetch_movie_recommendations(api_key, movie_id):
+    url = f"https://api.themoviedb.org/3/movie/{movie_id}/recommendations?api_key={api_key}"
+    response = requests.get(url)
+    data = response.json()
+    return data['results'][:3]  # Récupérer les 3 premières recommandations
+
+# Configuration de la page pour occuper toute la largeur par défaut.
+st.set_page_config(layout="wide")
+
+# Définir le fond de l'application en noir avec du CSS.
+st.markdown(
+    """
+    <style>
+    body {
+        background-color: black;
+        color: white;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# Utilisation d'une grille de disposition pour organiser les éléments
+col1, col2, col3 = st.columns([1, 5, 1])
+
+# Afficher le titre sous forme d'image dans la colonne 1 (actuellement chemin d'accès erroné)
+with col1:
+    st.write(r'<img src="C:\Users\teddy\Documents\Projet.2\Cinema-PNG-HD-3980430216.png" style="width: 200px;">', unsafe_allow_html=True)
+
+# Afficher la barre de recherche dans la colonne 2 (pour pouvoir la centré)
+with col2:
+    search_query = st.text_input("Rechercher un film par titre", "", max_chars=50, key="search_input")
+
+# Récupérer les informations sur le film le plus populaire
+most_popular_movie = fetch_most_popular_movie(api_key)
+
+# Afficher l'affiche du film le plus populaire dans la colonne 2
+if most_popular_movie:
+    poster_path = most_popular_movie['poster_path']
+    if poster_path:
+        poster_url = f"https://image.tmdb.org/t/p/original/{poster_path}"  # Utiliser la taille d'origine pour garantir la meilleure qualité
+
+# Afficher l'affiche du film le plus populaire (la grosse affiche centrale)
+    with col2:
+            st.write(
+                f"""
+                <div style="
+                    position: relative;
+                    width: 90%;
+                    height: 0;
+                    padding-top: 36.25%; /* Ratio d'aspect 16:9 pour l'affiche */
+                    ">
+                    <img src="{poster_url}" style="
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        object-fit: cover;
+                        border-radius: 15px; /* Bordure arrondie */
+                        ">
+                    <div style="
+                        position: absolute;
+                        top: 10px;
+                        left: 10px;
+                        color: white;
+                        font-weight: bold;
+                        font-size: 24px;
+                        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+                        z-index: 1;
+                        ">
+                        <p style="font-weight: bold; font-size: 24px;">{most_popular_movie['title']}</p>
+                        <span style="font-size: 24px;">{'⭐' * int(most_popular_movie['vote_average'] / 2)}</span>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+# Afficher les recommandations de films dans la colonne 2
+if most_popular_movie:
+    recommendations = fetch_movie_recommendations(api_key, most_popular_movie['id'])
+    with col2:
+        st.markdown('<h2 style="font-weight:bold;">Recommandations:</h2>', unsafe_allow_html=True)
+        
+# Création des colonnes pour afficher les affiches côte à côte
+        col_count = len(recommendations)
+        columns = st.columns(col_count)
+        
+# Affichage des affiches dans les colonnes 
+        for i, movie in enumerate(recommendations):
+            if movie['poster_path']:
+                poster_url = f"https://image.tmdb.org/t/p/original/{movie['poster_path']}"
+                with columns[i]:
+                    st.markdown(f'<img src="{poster_url}" style="width: 220px; border-radius: 15px;">', unsafe_allow_html=True)
+                    st.write(movie['title'], unsafe_allow_html=True)
+
+
+# Afficher les boutons pour choisir les genres dans la colonne 3 (pour le moment relié à rien, objectif changement des films mis en avant)
+with col3:
+    st.markdown('<h2 style="font-weight:bold;">Genres:</h2>', unsafe_allow_html=True)
+    st.markdown('<button style="width: 150px; height: 50px;">Drama</button>', unsafe_allow_html=True)
+    st.markdown('<button style="width: 150px; height: 50px;">Romance</button>', unsafe_allow_html=True)
+    st.markdown('<button style="width: 150px; height: 50px;">Action</button>', unsafe_allow_html=True)
+
+# Pour test et lancer l'app faire "Streamlit run app.py" dans votre terminal
+# Ce code n'est qu'une ébauche du design Figma fait par Luana, il sert de test et manque encore de 95% du travail.
