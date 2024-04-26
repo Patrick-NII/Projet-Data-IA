@@ -1,122 +1,180 @@
+
+# Streamlit est un Framework Python, il permet de créer des applications 
+# web (principalement pour le Machine learning et la data science) de manière simple et rapide.
+
+# Requests permet d'envoyer des requêtes HTTP dans Python.
 import streamlit as st
 import requests
 
-# Il vous faut une clé de développeur TMDB
-api_key = "Mettre votre clé API TMDB"
 
-# Fonction pour récupérer le film le plus populaire.
-def fetch_most_popular_movie(api_key):
-    url = f"https://api.themoviedb.org/3/movie/popular?api_key={api_key}"
+
+# Définit une fonction nommée "fetch_popular_movies" qui prend trois arguments : api_key, language 
+# et page, avec les deux derniers ayant des valeurs par défaut. Cette fonction est utilisée pour
+# récupérer les films populaires à partir de l'API de TMDB.
+
+# "URL" crée l'URL pour l'API TMDB en utilisant la clé API (disponible via la section API sur TMDB)
+# la langue spécifiée (language) et le numéro de page spécifié (page).
+
+# Les autres fonctions possède une structure similaire, vous pouvez utiliser ces explications comme
+# source en cas d'incompréhension.
+def fetch_popular_movies(api_key, language='en-US', page=1):
+    url = f"https://api.themoviedb.org/3/movie/popular?api_key={api_key}&language={language}&page={page}"
     response = requests.get(url)
     data = response.json()
-    # Récupérer le premier film de la liste des résultats.
-    return data['results'][0] 
+    return data['results']
 
-# Fonction pour récupérer les recommandations de films en fonction d'un film donné.
-def fetch_movie_recommendations(api_key, movie_id):
-    url = f"https://api.themoviedb.org/3/movie/{movie_id}/recommendations?api_key={api_key}"
+# Définit une fonction nommée "fetch_movie_detail" pour récupérer les infos d'un film via ID.
+def fetch_movie_details(movie_id, api_key, language='en-US'):
+    url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={api_key}&language={language}"
     response = requests.get(url)
     data = response.json()
-    return data['results'][:3]  # Récupérer les 3 premières recommandations
+    return data
 
-# Configuration de la page pour occuper toute la largeur par défaut.
-st.set_page_config(layout="wide")
+# Définit une fonction nommée "fetch_poster" pour récupérer l'affiche d'un film via son ID.
+def fetch_poster(movie_id, api_key):
+    movie_details = fetch_movie_details(movie_id, api_key)
+    poster_path = movie_details['poster_path']
+    full_path = f"https://image.tmdb.org/t/p/w500{poster_path}"
+    return full_path
 
-# Définir le fond de l'application en noir avec du CSS.
+# Définit une fonction nommée "fetch_movie_genres" pour récupérer les genres disponibles (API TMDB).
+def fetch_movie_genres(api_key, language='en-US'):
+    url = f"https://api.themoviedb.org/3/genre/movie/list?api_key={api_key}&language={language}"
+    response = requests.get(url)
+    data = response.json()
+    return data['genres']
+
+# Définit une fonction nommée "fetch_movie_years" pour récupérer les années disponibles (inversées).
+def fetch_movie_years(api_key, start_year=1900, end_year=2022):
+    return list(reversed(range(start_year, end_year+1)))
+
+# Définit une fonction nommée "search_movies_by_title" pour rechercher les films par titre
+def search_movies_by_title(api_key, title):
+    url = f"https://api.themoviedb.org/3/search/movie?api_key={api_key}&query={title}"
+    response = requests.get(url)
+    data = response.json()
+    return data['results']
+
+# Définit une fonction nommée "search_movies_by_genre" pour rechercher les films par genre
+def search_movies_by_genre(api_key, genre_id):
+    url = f"https://api.themoviedb.org/3/discover/movie?api_key={api_key}&with_genres={genre_id}"
+    response = requests.get(url)
+    data = response.json()
+    return data['results']
+
+# Définit une fonction nommée "search_movies_by_year" pour rechercher les films par année
+def search_movies_by_year(api_key, year):
+    url = f"https://api.themoviedb.org/3/discover/movie?api_key={api_key}&primary_release_year={year}"
+    response = requests.get(url)
+    data = response.json()
+    return data['results']
+
+api_key = "5357bdc3c9188e1ab89368e2b9b8cab7"
+
+# Configuration de la page Streamlit
+st.set_page_config(
+    page_title="Système de recommandation de film",
+    page_icon="🎥",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# CSS pour zoom sur les affiches.
 st.markdown(
     """
     <style>
-    body {
-        background-color: black;
-        color: white;
+    .hover-effect:hover {
+        transform: scale(1.10);
+        transition: transform 0.3s ease;
     }
     </style>
     """,
     unsafe_allow_html=True
 )
 
-# Utilisation d'une grille de disposition pour organiser les éléments
-col1, col2, col3 = st.columns([1, 5, 1])
+# Ajustement de la largeur de la barre latérale.
+st.sidebar.markdown('<style>.sidebar-content {width: 30%;}</style>', unsafe_allow_html=True)
 
-# Afficher le titre sous forme d'image dans la colonne 1 (actuellement chemin d'accès erroné)
-with col1:
-    st.write(r'<img src="C:\Users\teddy\Documents\Projet.2\Cinema-PNG-HD-3980430216.png" style="width: 200px;">', unsafe_allow_html=True)
-
-# Afficher la barre de recherche dans la colonne 2 (pour pouvoir la centré)
-with col2:
-    search_query = st.text_input("Rechercher un film par titre", "", max_chars=50, key="search_input")
-
-# Récupérer les informations sur le film le plus populaire
-most_popular_movie = fetch_most_popular_movie(api_key)
-
-# Afficher l'affiche du film le plus populaire dans la colonne 2
-if most_popular_movie:
-    poster_path = most_popular_movie['poster_path']
-    if poster_path:
-        poster_url = f"https://image.tmdb.org/t/p/original/{poster_path}"  # Utiliser la taille d'origine pour garantir la meilleure qualité
-
-# Afficher l'affiche du film le plus populaire (la grosse affiche centrale)
-    with col2:
-            st.write(
-                f"""
-                <div style="
-                    position: relative;
-                    width: 90%;
-                    height: 0;
-                    padding-top: 36.25%; /* Ratio d'aspect 16:9 pour l'affiche */
-                    ">
-                    <img src="{poster_url}" style="
-                        position: absolute;
-                        top: 0;
-                        left: 0;
-                        width: 100%;
-                        height: 100%;
-                        object-fit: cover;
-                        border-radius: 15px; /* Bordure arrondie */
-                        ">
-                    <div style="
-                        position: absolute;
-                        top: 10px;
-                        left: 10px;
-                        color: white;
-                        font-weight: bold;
-                        font-size: 24px;
-                        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-                        z-index: 1;
-                        ">
-                        <p style="font-weight: bold; font-size: 24px;">{most_popular_movie['title']}</p>
-                        <span style="font-size: 24px;">{'⭐' * int(most_popular_movie['vote_average'] / 2)}</span>
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-# Afficher les recommandations de films dans la colonne 2
-if most_popular_movie:
-    recommendations = fetch_movie_recommendations(api_key, most_popular_movie['id'])
-    with col2:
-        st.markdown('<h2 style="font-weight:bold;">Recommandations:</h2>', unsafe_allow_html=True)
-        
-# Création des colonnes pour afficher les affiches côte à côte
-        col_count = len(recommendations)
-        columns = st.columns(col_count)
-        
-# Affichage des affiches dans les colonnes 
-        for i, movie in enumerate(recommendations):
-            if movie['poster_path']:
-                poster_url = f"https://image.tmdb.org/t/p/original/{movie['poster_path']}"
-                with columns[i]:
-                    st.markdown(f'<img src="{poster_url}" style="width: 220px; border-radius: 15px;">', unsafe_allow_html=True)
-                    st.write(movie['title'], unsafe_allow_html=True)
+# Barre latérale pour les options de tri.
+with st.sidebar:
+    st.image("C:\\Users\\teddy\\Documents\\Projet.2\\Cinema-PNG-HD-3980430216.png", width=150)
+    st.header("Options de tri")
+    st.write("### Rechercher des films par :")
+    selected_genre = st.selectbox("Genre", ["Tous les genres"] + [genre['name'] for genre in fetch_movie_genres(api_key)])
+    selected_year = st.selectbox("Année", ["Toutes les années"] + [str(year) for year in fetch_movie_years(api_key)])
+    selected_title = st.text_input("Titre du film")
+    search_button = st.button("Rechercher")
+    st.write("### Ou afficher les films populaires :")
+    popular_movies_button = st.button("Films populaires")
 
 
-# Afficher les boutons pour choisir les genres dans la colonne 3 (pour le moment relié à rien, objectif changement des films mis en avant)
-with col3:
-    st.markdown('<h2 style="font-weight:bold;">Genres:</h2>', unsafe_allow_html=True)
-    st.markdown('<button style="width: 150px; height: 50px;">Drama</button>', unsafe_allow_html=True)
-    st.markdown('<button style="width: 150px; height: 50px;">Romance</button>', unsafe_allow_html=True)
-    st.markdown('<button style="width: 150px; height: 50px;">Action</button>', unsafe_allow_html=True)
+st.markdown('<h1 style="text-align: center;">Système de recommandation de film</h1>', unsafe_allow_html=True)
+st.write('### Trouve le film qui te correspond !')
 
-# Pour test et lancer l'app faire "Streamlit run app.py" dans votre terminal
-# Ce code n'est qu'une ébauche du design Figma fait par Luana, il sert de test et manque encore de 95% du travail.
+if search_button:
+    if selected_title:
+        movies = search_movies_by_title(api_key, selected_title)
+    elif selected_genre != "Tous les genres" and selected_year != "Toutes les années":
+        genre_id = next((genre['id'] for genre in fetch_movie_genres(api_key) if genre['name'] == selected_genre), None)
+        if genre_id:
+# Récupérer les films correspondant au genre sélectionné.
+            movies = search_movies_by_genre(api_key, genre_id)
+# Vérifier si la liste de films est vide.
+            if not movies:
+                st.warning("Aucun film trouvé pour ce genre et cette année.")
+                st.stop()
+# Filtrer ces films par année / genre.
+            movies = [movie for movie in movies if movie['release_date'].startswith(selected_year)]
+        else:
+            st.error("Le genre sélectionné n'est pas valide.")
+            st.stop()
+    elif selected_genre != "Tous les genres":
+        genre_id = next((genre['id'] for genre in fetch_movie_genres(api_key) if genre['name'] == selected_genre), None)
+        if genre_id:
+            movies = search_movies_by_genre(api_key, genre_id)
+        else:
+            st.error("Le genre sélectionné n'est pas valide.")
+            st.stop()
+    elif selected_year != "Toutes les années":
+        movies = search_movies_by_year(api_key, selected_year)
+    else:
+        st.error("Veuillez spécifier au moins un critère de recherche.")
+
+
+       
+elif popular_movies_button:
+# Affichage des films populaires par défaut.
+    movies = fetch_popular_movies(api_key)
+
+import streamlit.components.v1 as components
+
+if 'movies' in locals() and movies:
+    col1, col2, col3, col4, col5 = st.columns(5)
+    columns = [col1, col2, col3, col4, col5]
+    for i, movie in enumerate(movies[:5]):
+        with columns[i]:
+            poster = fetch_poster(movie["id"], api_key)
+            # Affichage de l'affiche du film avec les informations superposées
+            st.markdown(f'<div style="position: relative;">'
+                        f'<a href="{fetch_movie_details(movie["id"], api_key)["homepage"]}" target="_blank">'
+                        f'<img src="{poster}" class="hover-effect" width="250">'
+                        f'<div style="position: absolute; bottom: 10px; left: 10px; padding: 5px; background-color: rgba(0, 0, 0, 0.5); color: white; font-size: 14px; font-weight: bold; width: 120px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">'
+                        f'{movie["title"][:25] + "..." if len(movie["title"]) > 28 else movie["title"]}<br>'
+                        f"Année : {movie['release_date'].split('-')[0]}"
+                        f"<br>Note : {movie['vote_average']}"
+                        f"<br>⭐{'⭐' * int(movie['vote_average'] / 2)}"
+                        f'</div></a></div>', unsafe_allow_html=True)
+    for movie in movies[:5]:
+        st.markdown(f'<div id="popup-{movie["id"]}" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1;">'
+                    f'<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80%; height: 80%; background-color: white; padding: 20px; overflow-y: auto;">'
+                    f'<a href="#" onclick="document.getElementById(\'popup-{movie["id"]}\').style.display=\'none\'; return false;" style="position: absolute; top: 10px; right: 10px; font-size: 24px; color: black;">&times;</a>'
+                    f'<h2>{movie["title"]}</h2>'
+                    f'<p>Année : {movie["release_date"].split("-")[0]}</p>'
+                    f'<p>Note : {movie["vote_average"]}</p>'
+                    f'<p>⭐{"⭐" * int(movie["vote_average"] / 2)}</p>'
+                    f'</div></div>', unsafe_allow_html=True)
+
+
+
+
+
